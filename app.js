@@ -1,4 +1,4 @@
-import {query,QUERIES,groupStops,routeTargets,arrivalStatus} from './transit.js';
+import {query,QUERIES,groupStops,routeTargets,arrivalStatus} from './transit.js?v=2';
 const $=id=>document.getElementById(id);
 let position=null,groups=[],selected=null,targets=[],rows=[],generation=0,lookupGeneration=0,busy=false,updatedAt=0,lastAttempt=0;
 const routeCache=new Map();

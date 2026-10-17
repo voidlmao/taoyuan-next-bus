@@ -39,3 +39,9 @@ export function arrivalStatus(n){
  if(n.comeTime)return {text:/^\d{1,2}:\d{2}$/.test(n.comeTime)?`預定 ${n.comeTime}`:String(n.comeTime),live:false,rank:Infinity};
  return {text:'尚未發車',live:false,rank:Infinity};
 }
+
+export const FAVORITE_ROUTES=['117','151','152','GR'];
+export function matchesRoute(name,filter){
+ const n=String(name).replace(/\s/g,'').toUpperCase();
+ return filter==='all'||(filter==='favorites'?FAVORITE_ROUTES.includes(n):n===filter);
+}

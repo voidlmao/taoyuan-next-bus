@@ -11,3 +11,7 @@ main{width:100%}.workspace,.stops{width:100%;max-width:100%}
 .stops{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
 .stop{flex:0 0 225px}.stop>span:nth-child(2),.summary>div{min-width:0;overflow-wrap:anywhere}
 .arrivals-panel{max-width:100%}.eta{max-width:45%;white-space:normal;overflow-wrap:anywhere}
+
+.route-filters{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 0;min-width:0}
+.route-filters button{flex:1 0 40px;min-height:44px;padding:8px 7px;border:1px solid var(--line);border-radius:10px;background:#f6f7f2;color:var(--green);font-size:13px;font-weight:600}
+.route-filters button[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:white}

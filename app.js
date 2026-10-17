@@ -1,6 +1,6 @@
-import {query,QUERIES,groupStops,routeTargets,arrivalStatus} from './transit.js?v=2';
+import {query,QUERIES,groupStops,routeTargets,arrivalStatus,matchesRoute} from './transit.js?v=5';
 const $=id=>document.getElementById(id);
-let position=null,groups=[],selected=null,targets=[],rows=[],generation=0,lookupGeneration=0,busy=false,updatedAt=0,lastAttempt=0;
+let position=null,groups=[],selected=null,targets=[],rows=[],generation=0,lookupGeneration=0,busy=false,updatedAt=0,lastAttempt=0,routeFilter='all';
 const routeCache=new Map();
 function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
 function notice(text){$('notice').textContent=text;$('notice').hidden=!text;}
@@ -46,11 +46,14 @@ async function refresh(token=generation){
  }catch(e){if(token===generation)arrivalError(e);}
  finally{if(token===generation){busy=false;$('refresh').disabled=false;$('refresh').textContent='↻ 更新';}}
 }
+function filteredRows(){return rows.filter(r=>matchesRoute(r.name,routeFilter));}
 function renderArrivals(){
+ const visible=filteredRows();
  $('arrivals').replaceChildren();
- for(const r of rows){const item=el('div',undefined,'route');const dest=r.goBack===1?r.destination:r.departure;const text=el('div',undefined,'route-destination');text.append(el('strong',`往 ${dest||'方向未提供'}`),el('small',`${r.goBack===1?'去程':'返程'}${r.status.last?' · 末班車':''}`));item.append(el('span',r.name,'route-code'),text,el('span',r.status.text,`eta${r.status.live?' live':''}${r.status.soon?' soon':''}`));$('arrivals').append(item);}
- const next=rows.find(r=>r.status.live);
- $('summaryText').textContent=next?`${next.name} · ${next.status.text}`:'目前沒有即時到站預估';
+ for(const r of visible){const item=el('div',undefined,'route');const dest=r.goBack===1?r.destination:r.departure;const text=el('div',undefined,'route-destination');text.append(el('strong',`往 ${dest||'方向未提供'}`),el('small',`${r.goBack===1?'去程':'返程'}${r.status.last?' · 末班車':''}`));item.append(el('span',r.name,'route-code'),text,el('span',r.status.text,`eta${r.status.live?' live':''}${r.status.soon?' soon':''}`));$('arrivals').append(item);}
+ const next=filteredRows().find(r=>r.status.live);
+ if(!visible.length){$('arrivals').append(el('p',routeFilter==='all'?'這個站點目前沒有路線資料。':'這個站點沒有符合的常用路線，可切換附近站點或點「全部」。','empty'));}
+ $('summaryText').textContent=next?`${next.name} · ${next.status.text}`:visible.length?'目前沒有即時到站預估':'此站沒有符合的路線';
  updateClock();
 }
 function updateClock(){if(updatedAt){const age=Math.floor((Date.now()-updatedAt)/1000);$('updated').textContent=age<5?'剛剛更新':`${age} 秒前更新`;if(age>90){$('summaryText').textContent='資料已過期，請更新';$('updated').textContent='資料已過期';$('arrivals').replaceChildren(el('p','上一筆到站資訊已過期，請更新。','empty'));rows=[];}}}
@@ -60,8 +63,9 @@ $('locate').onclick=()=>{
  navigator.geolocation.getCurrentPosition(async p=>{position={lat:p.coords.latitude,lon:p.coords.longitude};$('locationStatus').textContent=`定位完成 · 誤差約 ${Math.round(p.coords.accuracy)} 公尺${p.coords.accuracy>100?'，請確認站牌位置':''}`;$('locate').disabled=false;await lookup();},e=>{$('locate').disabled=false;$('locationStatus').textContent='定位未完成。仍可使用站名搜尋。';const homeScreen=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;notice(e.code===1?(homeScreen?'iPhone 拒絕了主畫面版本的定位。請至「設定 → 隱私權與安全性 → 定位服務」檢查此 App 的權限；Safari 能定位，不代表此版本也已獲允許。若清單沒有此 App，請先改用 Safari 查詢。':'位置權限被拒絕。請檢查 iPhone 定位服務及此網站的位置權限，或輸入站名。'):e.code===2?'無法取得位置，請確認裝置定位服務已開啟。':'定位逾時，請到訊號較好的地方重試。');},{enableHighAccuracy:true,timeout:15000,maximumAge:30000});
 };
 $('searchForm').onsubmit=e=>{e.preventDefault();const name=$('search').value.trim();if(!name){notice('請輸入站名，例如「桃園火車站」。');return;}lookup(name);};
+document.querySelectorAll('[data-route-filter]').forEach(button=>{button.onclick=()=>{routeFilter=button.dataset.routeFilter;document.querySelectorAll('[data-route-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));$('routeHeading').textContent=routeFilter==='all'?'經過這站的公車':routeFilter==='favorites'?'常用路線到站資訊':`${routeFilter} 到站資訊`;$('summaryLabel').textContent=routeFilter==='all'?'下一班公車':routeFilter==='favorites'?'常用路線下一班':`${routeFilter} 下一班`;if(updatedAt)renderArrivals();};});
 $('radius').onchange=()=>{if(position)lookup();};
 $('refresh').onclick=()=>{if(selected){if(targets.length)refresh();else selectStop(selected);}};
-$('speak').onclick=()=>{if(!('speechSynthesis'in window)){notice('這個瀏覽器不支援朗讀。');return;}const next=rows.find(r=>r.status.live);const text=selected?`${selected.name}。${next&&updatedAt&&Date.now()-updatedAt<90000?`${next.name}，往${next.goBack===1?next.destination:next.departure}，${next.status.text}。`:'目前無法確認下一班到站時間。'}`:'請先選擇站牌。';speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='zh-TW';speechSynthesis.speak(u);};
+$('speak').onclick=()=>{if(!('speechSynthesis'in window)){notice('這個瀏覽器不支援朗讀。');return;}const next=filteredRows().find(r=>r.status.live);const text=selected?`${selected.name}。${next&&updatedAt&&Date.now()-updatedAt<90000?`${next.name}，往${next.goBack===1?next.destination:next.departure}，${next.status.text}。`:'目前無法確認下一班到站時間。'}`:'請先選擇站牌。';speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='zh-TW';speechSynthesis.speak(u);};
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateClock();if(selected&&Date.now()-lastAttempt>30000)refresh();}});
 setInterval(()=>{if(!document.hidden){updateClock();if(selected&&!busy&&Date.now()-lastAttempt>=30000)refresh();}},1000);

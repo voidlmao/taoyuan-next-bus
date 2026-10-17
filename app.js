@@ -57,7 +57,7 @@ function updateClock(){if(updatedAt){const age=Math.floor((Date.now()-updatedAt)
 $('locate').onclick=()=>{
  if(!navigator.geolocation){notice('這個瀏覽器不支援定位，請改用站名搜尋。');return;}
  $('locate').disabled=true;$('locationStatus').textContent='正在取得你的位置…';notice('');
- navigator.geolocation.getCurrentPosition(async p=>{position={lat:p.coords.latitude,lon:p.coords.longitude};$('locationStatus').textContent=`定位完成 · 誤差約 ${Math.round(p.coords.accuracy)} 公尺${p.coords.accuracy>100?'，請確認站牌位置':''}`;$('locate').disabled=false;await lookup();},e=>{$('locate').disabled=false;$('locationStatus').textContent='定位未完成。仍可使用站名搜尋。';notice(e.code===1?'位置權限未開啟。請在瀏覽器設定允許定位，或輸入站名。':e.code===2?'無法取得位置，請確認裝置定位服務已開啟。':'定位逾時，請到訊號較好的地方重試。');},{enableHighAccuracy:true,timeout:15000,maximumAge:30000});
+ navigator.geolocation.getCurrentPosition(async p=>{position={lat:p.coords.latitude,lon:p.coords.longitude};$('locationStatus').textContent=`定位完成 · 誤差約 ${Math.round(p.coords.accuracy)} 公尺${p.coords.accuracy>100?'，請確認站牌位置':''}`;$('locate').disabled=false;await lookup();},e=>{$('locate').disabled=false;$('locationStatus').textContent='定位未完成。仍可使用站名搜尋。';const homeScreen=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;notice(e.code===1?(homeScreen?'iPhone 拒絕了主畫面版本的定位。請至「設定 → 隱私權與安全性 → 定位服務」檢查此 App 的權限；Safari 能定位，不代表此版本也已獲允許。若清單沒有此 App，請先改用 Safari 查詢。':'位置權限被拒絕。請檢查 iPhone 定位服務及此網站的位置權限，或輸入站名。'):e.code===2?'無法取得位置，請確認裝置定位服務已開啟。':'定位逾時，請到訊號較好的地方重試。');},{enableHighAccuracy:true,timeout:15000,maximumAge:30000});
 };
 $('searchForm').onsubmit=e=>{e.preventDefault();const name=$('search').value.trim();if(!name){notice('請輸入站名，例如「桃園火車站」。');return;}lookup(name);};
 $('radius').onchange=()=>{if(position)lookup();};

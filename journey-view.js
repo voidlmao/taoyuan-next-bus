@@ -10,7 +10,7 @@ function clearPlan(){planToken++;busy=false;$('journeyPlan').disabled=!destinati
 async function searchPlaces(term){
  if(placeCache.has(term))return placeCache.get(term);
  const gap=1100-(Date.now()-lastPlaceQuery);if(gap>0)await new Promise(r=>setTimeout(r,gap));lastPlaceQuery=Date.now();
- const url=new URL('https://photon.komoot.io/api/');url.search=new URLSearchParams({q:term,limit:'6',bbox:'119,21.5,123,26.2'});
+ const url=new URL('https://photon.komoot.io/api/');url.search=new URLSearchParams({q:term,lang:'default',limit:'6',bbox:'119,21.5,123,26.2'});
  const responses=await Promise.allSettled([
   fetch(url,{signal:AbortSignal.timeout(20000),credentials:'omit'}).then(async r=>{if(!r.ok)throw new Error('地標服務暫時無法使用');const d=await r.json();return (d.features||[]).map(f=>{const p=f.properties||{},[lon,lat]=f.geometry.coordinates;return {lat,lon,name:p.name||[p.street,p.housenumber].filter(Boolean).join(' '),address:[p.city,p.district,p.street,p.housenumber].filter(Boolean).join(' '),source:'地標／地址'};});}),
   api('search',{name:term,lang:'zh'}).then(d=>(d.stationsByName?.edges||[]).map(e=>({...e.node,source:'公車站點',address:'桃園公車資料'})))

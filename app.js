@@ -17,7 +17,7 @@ function renderStops(){
 function fillDirections(node,key,limit=3){
  const routes=routeCache.get(key);node.replaceChildren();
  if(!routes){node.append(el('span',directionErrors.has(key)?'方向查詢失敗，點選此站重試':'查詢行車方向中…'));return;}
- const info=stopRouteDescription(routes,routeFilter,limit);
+ const info=stopRouteDescription(routes,'all',limit);
  for(const text of info.labels)node.append(el('span',text));
  if(info.remaining)node.append(el('span',`另有 ${info.remaining} 個路線方向`,'direction-more'));
  if(!info.labels.length)node.append(el('span',routeFilter==='all'?'此站無路線資料':routeFilter==='favorites'?'此站沒有你的常用路線':`此站沒有 ${routeFilter} 路線`));
@@ -38,8 +38,17 @@ async function hydrateStopRoutes(stopGroups,lookupToken){
  for(const g of missing){if(g.ids.some(id=>failed.has(id)||!stations.has(id))){directionErrors.add(g.key);continue;}routeCache.set(g.key,routeTargets(g.ids.map(id=>stations.get(id))));directionErrors.delete(g.key);}
  updateStopDirections();
 }
+function renderRouteFilter(){
+ const names=[...new Set(targets.map(r=>r.name))].sort((a,b)=>a.localeCompare(b,'zh-Hant',{numeric:true}));
+ if(!names.includes(routeFilter))routeFilter='all';
+ $('stopRouteFilter').replaceChildren();const all=el('option','全部路線');all.value='all';$('stopRouteFilter').append(all);
+ for(const name of names){const option=el('option',name);option.value=name;$('stopRouteFilter').append(option);}
+ $('stopRouteFilter').value=routeFilter;$('stopRouteFilterWrap').hidden=names.length<2;
+ $('routeHeading').textContent=routeFilter==='all'?'經過這站的公車':`${routeFilter} 到站資訊`;
+ $('summaryLabel').textContent=routeFilter==='all'?'下一班公車':`${routeFilter} 下一班`;
+}
 async function lookup(name){
- document.body.classList.add('has-results');const token=++lookupGeneration;generation++;busy=false;targets=[];selected=null;rows=[];updatedAt=0;
+ document.body.classList.add('has-results');const token=++lookupGeneration;generation++;busy=false;targets=[];selected=null;rows=[];updatedAt=0;routeFilter='all';renderRouteFilter();
  $('workspace').hidden=false;$('welcome').hidden=true;$('stops').replaceChildren(el('p','正在找站牌…','loading'));$('stopName').textContent='正在尋找站牌';$('stopDistance').textContent='';$('navigate').hidden=true;$('summaryText').textContent='正在查詢…';$('updated').textContent='';working('正在取得站點');notice('');
  try{
   const d=name?await api('search',{name,lang:'zh'}):await api('nearby',{location:{...position,radius:Number($('radius').value)},lang:'zh'});
@@ -52,10 +61,10 @@ async function lookup(name){
  }catch(e){if(token!==lookupGeneration)return;notice(e.name==='TimeoutError'?'查詢逾時，請重試。':e.message);$('stops').replaceChildren(el('p','查詢失敗，請重新定位或搜尋。','empty'));$('summaryText').textContent='目前無法查詢';$('stopName').textContent='尚未選擇站牌';$('arrivals').replaceChildren();}
 }
 async function selectStop(s){
- const token=++generation;busy=false;lastAttempt=0;$('refresh').disabled=false;$('refresh').textContent='↻ 更新';selected=s;targets=[];rows=[];updatedAt=0;renderStops();$('stopName').textContent=s.name;$('stopDistance').textContent=s.distance===null?'搜尋站點':`距你 ${formatDistance(s.distance)}（直線）`;$('navigate').hidden=false;$('navigate').href=`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}&travelmode=walking`;$('summaryText').textContent='正在查詢到站資訊…';$('updated').textContent='';working('正在查詢路線');notice('');
+ const token=++generation;busy=false;lastAttempt=0;$('refresh').disabled=false;$('refresh').textContent='↻ 更新';selected=s;targets=[];rows=[];updatedAt=0;routeFilter='all';renderRouteFilter();renderStops();$('stopName').textContent=s.name;$('stopDistance').textContent=s.distance===null?'搜尋站點':`距你 ${formatDistance(s.distance)}（直線）`;$('navigate').hidden=false;$('navigate').href=`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}&travelmode=walking`;$('summaryText').textContent='正在查詢到站資訊…';$('updated').textContent='';working('正在查詢路線');notice('');
  try{
   let r=routeCache.get(s.key);if(!r){const d=await api('routes',{ids:s.ids,lang:'zh'});r=routeTargets((d.stations?.edges||[]).map(e=>e.node));routeCache.set(s.key,r);}
-  if(token!==generation)return;targets=r;directionErrors.delete(s.key);updateStopDirections();
+  if(token!==generation)return;targets=r;renderRouteFilter();directionErrors.delete(s.key);updateStopDirections();
   if(!r.length){$('summaryText').textContent='這個站點目前沒有路線資料';$('arrivals').replaceChildren(el('p','可選擇附近另一個站點。','empty'));return;}
   await refresh(token);
  }catch(e){if(token!==generation)return;if(!routeCache.has(s.key)){directionErrors.add(s.key);updateStopDirections();}arrivalError(e);}
@@ -78,7 +87,7 @@ function renderArrivals(){
  $('arrivals').replaceChildren();
  for(const r of visible){const item=el('div',undefined,'route');const dest=routeDestination(r);const text=el('div',undefined,'route-destination');text.append(el('strong',`往 ${dest||'方向未提供'}`),el('small',`${r.goBack===1?'去程':'返程'}${r.status.last?' · 末班車':''}`));const routeButton=el('button',r.name,'route-code');routeButton.type='button';routeButton.setAttribute('aria-label',`查看 ${r.name} 全部站點`);routeButton.onclick=()=>document.dispatchEvent(new CustomEvent('open-bus-route',{detail:{id:r.xno,name:r.name}}));item.append(routeButton,text,el('span',r.status.text,`eta${r.status.live?' live':''}${r.status.soon?' soon':''}`));$('arrivals').append(item);}
  const next=filteredRows().find(r=>r.status.live);
- if(!visible.length){$('arrivals').append(el('p',routeFilter==='all'?'這個站點目前沒有路線資料。':'這個站點沒有符合的常用路線，可切換附近站點或點「全部」。','empty'));}
+ if(!visible.length){$('arrivals').append(el('p',routeFilter==='all'?'這個站點目前沒有路線資料。':'這個站點沒有符合的路線，請切回全部路線。','empty'));}
  $('summaryText').textContent=next?`${next.name} 往 ${routeDestination(next)} · ${next.status.text}`:visible.length?'目前沒有即時到站預估':'此站沒有符合的路線';
  updateClock();
 }
@@ -89,7 +98,7 @@ $('locate').onclick=()=>{
  navigator.geolocation.getCurrentPosition(async p=>{position={lat:p.coords.latitude,lon:p.coords.longitude};$('locationStatus').textContent=`定位完成 · 誤差約 ${Math.round(p.coords.accuracy)} 公尺${p.coords.accuracy>100?'，請確認站牌位置':''}`;$('locate').disabled=false;await lookup();},e=>{$('locate').disabled=false;$('locationStatus').textContent='定位未完成。仍可使用站名搜尋。';const homeScreen=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;notice(e.code===1?(homeScreen?'iPhone 拒絕了主畫面版本的定位。請至「設定 → 隱私權與安全性 → 定位服務」檢查此 App 的權限；Safari 能定位，不代表此版本也已獲允許。若清單沒有此 App，請先改用 Safari 查詢。':'位置權限被拒絕。請檢查 iPhone 定位服務及此網站的位置權限，或輸入站名。'):e.code===2?'無法取得位置，請確認裝置定位服務已開啟。':'定位逾時，請到訊號較好的地方重試。');},{enableHighAccuracy:true,timeout:15000,maximumAge:30000});
 };
 $('searchForm').onsubmit=e=>{e.preventDefault();const name=$('search').value.trim();if(!name){notice('請輸入站名，例如「桃園火車站」。');return;}lookup(name);};
-document.querySelectorAll('[data-route-filter]').forEach(button=>{button.onclick=()=>{routeFilter=button.dataset.routeFilter;document.querySelectorAll('[data-route-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));$('routeHeading').textContent=routeFilter==='all'?'經過這站的公車':routeFilter==='favorites'?'常用路線到站資訊':`${routeFilter} 到站資訊`;$('summaryLabel').textContent=routeFilter==='all'?'下一班公車':routeFilter==='favorites'?'常用路線下一班':`${routeFilter} 下一班`;updateStopDirections();if(updatedAt)renderArrivals();};});
+$('stopRouteFilter').onchange=()=>{routeFilter=$('stopRouteFilter').value;renderRouteFilter();if(updatedAt)renderArrivals();};
 $('radius').onchange=()=>{if(position)lookup();};
 $('refresh').onclick=()=>{if(selected){if(targets.length)refresh();else selectStop(selected);}};
 $('speak').onclick=()=>{if(!('speechSynthesis'in window)){notice('這個瀏覽器不支援朗讀。');return;}const next=filteredRows().find(r=>r.status.live);const text=selected?`${selected.name}。${next&&updatedAt&&Date.now()-updatedAt<90000?`${next.name}，往${routeDestination(next)}，${next.status.text}。`:'目前無法確認下一班到站時間。'}`:'請先選擇站牌。';speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='zh-TW';speechSynthesis.speak(u);};

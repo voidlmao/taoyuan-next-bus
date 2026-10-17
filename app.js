@@ -13,7 +13,7 @@ function renderStops(){
  if(!groups.length)$('stops').append(el('p','找不到站牌。請擴大範圍或換個站名。','empty'));
 }
 async function lookup(name){
- const token=++lookupGeneration;generation++;busy=false;targets=[];selected=null;rows=[];updatedAt=0;
+ document.body.classList.add('has-results');const token=++lookupGeneration;generation++;busy=false;targets=[];selected=null;rows=[];updatedAt=0;
  $('workspace').hidden=false;$('welcome').hidden=true;$('stops').replaceChildren(el('p','正在找站牌…','loading'));$('stopName').textContent='正在尋找站牌';$('stopDistance').textContent='';$('navigate').hidden=true;$('summaryText').textContent='正在查詢…';$('updated').textContent='';working('正在取得站點');notice('');
  try{
   const d=name?await api('search',{name,lang:'zh'}):await api('nearby',{location:{...position,radius:Number($('radius').value)},lang:'zh'});

@@ -36,6 +36,6 @@ export function arrivalStatus(n){
  // Official etaTime is minutes, not seconds. Never infer an ETA from the timetable.
  const times=(n.etas||[]).map(e=>e.etaTime).filter(t=>typeof t==='number'&&Number.isFinite(t)&&t>=0);
  if(times.length){const min=Math.min(...times);return {text:min<1?'進站中':min<3?'即將到站':`${Math.round(min)} 分鐘`,live:true,soon:min<3,rank:min,last:n.etas.some(e=>e.etaTime===min&&e.isLast)};}
- if(n.comeTime)return {text:`預定 ${n.comeTime}`,live:false,rank:Infinity};
+ if(n.comeTime)return {text:/^\d{1,2}:\d{2}$/.test(n.comeTime)?`預定 ${n.comeTime}`:String(n.comeTime),live:false,rank:Infinity};
  return {text:'尚未發車',live:false,rank:Infinity};
 }

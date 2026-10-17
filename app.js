@@ -24,7 +24,6 @@ function fillDirections(node,key,limit=3){
 }
 function updateStopDirections(){
  document.querySelectorAll('[data-stop-key]').forEach(node=>fillDirections(node,node.dataset.stopKey));
- if(selected)fillDirections($('stopDirections'),selected.key,4);else $('stopDirections').replaceChildren();
 }
 async function hydrateStopRoutes(stopGroups,lookupToken){
  const missing=stopGroups.filter(g=>!routeCache.has(g.key));

@@ -1,5 +1,7 @@
 export const ENDPOINT='https://ebus.tycg.gov.tw/ebus/graphql';
 export const QUERIES={
+ routeList:`query($lang:String!){routes(lang:$lang){edges{node{id name departure destination description}}}}`,
+ routeDetail:`query($id:Int!,$lang:String!){route(xno:$id,lang:$lang){id name departure destination stations{edges{goBack orderNo node{id name lat lon}}}estimateTimes{edges{node{id goBack comeTime isSuspended isConstruction isEvent isOperationDay etas{etaTime isLast}}}}}}`,
  nearby:`query($location:NearStationInput!,$lang:String!){nearStations(location:$location,lang:$lang){edges{node{id name lat lon}}}}`,
  search:`query($name:String!,$lang:String!){stationsByName(name:$name,lang:$lang){edges{node{id name lat lon}}}}`,
  routes:`query($ids:[Int!]!,$lang:String!){stations(ids:$ids,lang:$lang){edges{node{id ... on Station{routes{edges{goBack node{id name departure destination}}}}}}}}`,
@@ -52,4 +54,9 @@ export function stopRouteDescription(routes,filter='all',limit=3){
  visible.sort((a,b)=>Number(matchesRoute(b.name,'favorites'))-Number(matchesRoute(a.name,'favorites'))||a.name.localeCompare(b.name,'zh-Hant',{numeric:true}));
  const labels=[...new Set(visible.map(r=>`${r.name} 往 ${routeDestination(r)}`))];
  return {labels:labels.slice(0,limit),remaining:Math.max(0,labels.length-limit)};
+}
+
+export function routeStopRows(route,direction){
+ const estimates=new Map((route.estimateTimes?.edges||[]).map(e=>[`${e.node.id}:${e.node.goBack}`,e.node]));
+ return (route.stations?.edges||[]).filter(e=>Number(e.goBack)===direction).sort((a,b)=>Number(a.orderNo)-Number(b.orderNo)).map(e=>({...e.node,orderNo:Number(e.orderNo),goBack:direction,status:arrivalStatus(estimates.get(`${e.node.id}:${direction}`))}));
 }

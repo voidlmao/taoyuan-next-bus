@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {distance,groupStops,routeTargets,arrivalStatus,matchesRoute,routeDestination,stopRouteDescription} from './transit.js';
+import {distance,groupStops,routeTargets,arrivalStatus,matchesRoute,routeDestination,stopRouteDescription,routeStopRows} from './transit.js';
 test('opposite-side stops remain separate; colocated route records merge',()=>{
  const nodes=[{id:1,name:'同名站',lat:25,lon:121.3},{id:2,name:'同名站',lat:25,lon:121.3},{id:3,name:'同名站',lat:25.0001,lon:121.3}];const g=groupStops(nodes,{lat:25,lon:121.3});assert.equal(g.length,2);assert.deepEqual(g[0].ids,[1,2]);assert.ok(g[1].distance>10);assert.equal(distance(nodes[0],nodes[1]),0);
 });
@@ -12,3 +12,5 @@ test('provider text status is not labeled a scheduled departure',()=>{assert.equ
 test('favorite route filter keeps only named routes and preserves all mode',()=>{assert.equal(matchesRoute('117','favorites'),true);assert.equal(matchesRoute('151','favorites'),true);assert.equal(matchesRoute('152','favorites'),true);assert.equal(matchesRoute(' gr ','favorites'),true);assert.equal(matchesRoute('1170','117'),false);assert.equal(matchesRoute('702','favorites'),false);assert.equal(matchesRoute('702','all'),true);});
 
 test('stop direction labels use opposite termini for go and return',()=>{const go={name:'117',goBack:1,departure:'甲站',destination:'乙站'};const back={...go,goBack:2};assert.equal(routeDestination(go),'乙站');assert.equal(routeDestination(back),'甲站');assert.deepEqual(stopRouteDescription([go,back],'117').labels,['117 往 乙站','117 往 甲站']);assert.deepEqual(stopRouteDescription([go],'151').labels,[]);});
+
+test('whole-route stations keep numeric order and join estimates by stop and direction',()=>{const route={stations:{edges:[{goBack:1,orderNo:10,node:{id:9,name:'後站'}},{goBack:2,orderNo:1,node:{id:9,name:'反向站'}},{goBack:1,orderNo:2,node:{id:8,name:'前站'}}]},estimateTimes:{edges:[{node:{id:9,goBack:2,etas:[{etaTime:3}]}},{node:{id:8,goBack:1,etas:[{etaTime:5}]}},{node:{id:9,goBack:1,etas:[{etaTime:12}]}}]}};const go=routeStopRows(route,1);assert.deepEqual(go.map(s=>s.name),['前站','後站']);assert.equal(go[1].status.rank,12);assert.equal(routeStopRows(route,2)[0].status.rank,3);assert.equal(routeStopRows({...route,estimateTimes:{edges:[]}},1)[0].status.live,false);});

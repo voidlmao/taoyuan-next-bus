@@ -1,4 +1,4 @@
-import {query,QUERIES,groupStops,routeTargets,arrivalStatus,matchesRoute,routeDestination,stopRouteDescription} from './transit.js?v=6';
+import {query,QUERIES,groupStops,routeTargets,arrivalStatus,matchesRoute,routeDestination,stopRouteDescription} from './transit.js?v=8';
 const $=id=>document.getElementById(id);
 let position=null,groups=[],selected=null,targets=[],rows=[],generation=0,lookupGeneration=0,busy=false,updatedAt=0,lastAttempt=0,routeFilter='all';
 const routeCache=new Map();
@@ -76,7 +76,7 @@ function filteredRows(){return rows.filter(r=>matchesRoute(r.name,routeFilter));
 function renderArrivals(){
  const visible=filteredRows();
  $('arrivals').replaceChildren();
- for(const r of visible){const item=el('div',undefined,'route');const dest=routeDestination(r);const text=el('div',undefined,'route-destination');text.append(el('strong',`往 ${dest||'方向未提供'}`),el('small',`${r.goBack===1?'去程':'返程'}${r.status.last?' · 末班車':''}`));item.append(el('span',r.name,'route-code'),text,el('span',r.status.text,`eta${r.status.live?' live':''}${r.status.soon?' soon':''}`));$('arrivals').append(item);}
+ for(const r of visible){const item=el('div',undefined,'route');const dest=routeDestination(r);const text=el('div',undefined,'route-destination');text.append(el('strong',`往 ${dest||'方向未提供'}`),el('small',`${r.goBack===1?'去程':'返程'}${r.status.last?' · 末班車':''}`));const routeButton=el('button',r.name,'route-code');routeButton.type='button';routeButton.setAttribute('aria-label',`查看 ${r.name} 全部站點`);routeButton.onclick=()=>document.dispatchEvent(new CustomEvent('open-bus-route',{detail:{id:r.xno,name:r.name}}));item.append(routeButton,text,el('span',r.status.text,`eta${r.status.live?' live':''}${r.status.soon?' soon':''}`));$('arrivals').append(item);}
  const next=filteredRows().find(r=>r.status.live);
  if(!visible.length){$('arrivals').append(el('p',routeFilter==='all'?'這個站點目前沒有路線資料。':'這個站點沒有符合的常用路線，可切換附近站點或點「全部」。','empty'));}
  $('summaryText').textContent=next?`${next.name} 往 ${routeDestination(next)} · ${next.status.text}`:visible.length?'目前沒有即時到站預估':'此站沒有符合的路線';
@@ -93,5 +93,5 @@ document.querySelectorAll('[data-route-filter]').forEach(button=>{button.onclick
 $('radius').onchange=()=>{if(position)lookup();};
 $('refresh').onclick=()=>{if(selected){if(targets.length)refresh();else selectStop(selected);}};
 $('speak').onclick=()=>{if(!('speechSynthesis'in window)){notice('這個瀏覽器不支援朗讀。');return;}const next=filteredRows().find(r=>r.status.live);const text=selected?`${selected.name}。${next&&updatedAt&&Date.now()-updatedAt<90000?`${next.name}，往${routeDestination(next)}，${next.status.text}。`:'目前無法確認下一班到站時間。'}`:'請先選擇站牌。';speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='zh-TW';speechSynthesis.speak(u);};
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateClock();if(selected&&Date.now()-lastAttempt>30000)refresh();}});
-setInterval(()=>{if(!document.hidden){updateClock();if(selected&&!busy&&Date.now()-lastAttempt>=30000)refresh();}},1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!$('nearbyView').hidden){updateClock();if(selected&&Date.now()-lastAttempt>30000)refresh();}});
+setInterval(()=>{if(!document.hidden&&!$('nearbyView').hidden){updateClock();if(selected&&!busy&&Date.now()-lastAttempt>=30000)refresh();}},1000);

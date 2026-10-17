@@ -4,7 +4,7 @@ const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefine
 let catalog=null,catalogLoading=false,current=null,currentId=null,direction=1,revision=0,busy=false,lastAttempt=0,updatedAt=0,expired=false;
 const api=(key,variables)=>query(QUERIES[key],variables,AbortSignal.timeout(20000));
 function message(text){$('routeNotice').hidden=!text;$('routeNotice').textContent=text;}
-function showRouteMode(enabled){$('nearbyView').hidden=enabled;$('routeView').hidden=!enabled;$('nearbyTab').setAttribute('aria-pressed',String(!enabled));$('routeTab').setAttribute('aria-pressed',String(enabled));}
+function showRouteMode(enabled){$('journeyView').hidden=true;$('journeyTab').setAttribute('aria-pressed','false');$('nearbyView').hidden=enabled;$('routeView').hidden=!enabled;$('nearbyTab').setAttribute('aria-pressed',String(!enabled));$('routeTab').setAttribute('aria-pressed',String(enabled));}
 async function loadCatalog(){
  if(catalog||catalogLoading){if(catalog)renderMatches();return;}catalogLoading=true;$('routeMatches').replaceChildren(el('p','正在載入路線…','loading'));message('');
  try{const d=await api('routeList',{lang:'zh'});catalog=(d.routes?.edges||[]).map(e=>e.node);renderMatches();}

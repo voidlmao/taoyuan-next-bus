@@ -1,1 +1,1 @@
-{"name":"taoyuan-next-bus","version":"1.0.0","private":true,"type":"module","scripts":{"test":"node --test transit.test.js"}}
+{"name":"taoyuan-next-bus","version":"1.0.0","private":true,"type":"module","scripts":{"test":"node --test"}}

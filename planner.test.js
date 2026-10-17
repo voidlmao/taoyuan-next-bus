@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {commonRouteIds,directJourneys} from './planner.js';
+const points=[{id:1,name:'起點',lat:25,lon:121.3},{id:2,name:'中途',lat:25.001,lon:121.3},{id:3,name:'終點',lat:25.002,lon:121.3}];
+const route={id:117,name:'117',departure:'甲',destination:'乙',stations:{edges:[...points.map((node,i)=>({node,orderNo:i+1,goBack:1})),...points.slice().reverse().map((node,i)=>({node,orderNo:i+1,goBack:2}))]},estimateTimes:{edges:[]}};
+test('direct route requires matching direction and forward station order',()=>{const trips=directJourneys([route],[1],[3],points[0],points[2],100,100);assert.equal(trips.length,1);assert.equal(trips[0].goBack,1);assert.equal(trips[0].rideStops,2);assert.equal(trips[0].towards,'乙');});
+test('nearby same-name pole IDs are not silently swapped',()=>{assert.equal(directJourneys([route],[999],[3],points[0],points[2],100,100).length,0);});
+test('both ends must be within their selected walking radius',()=>{assert.equal(directJourneys([route],[1],[3],points[2],points[2],50,50).length,0);});
+test('route intersections must include the same direction',()=>{const s=[{id:1,routes:{edges:[{goBack:1,node:{id:117}}]}},{id:3,routes:{edges:[{goBack:2,node:{id:117}}]}}];assert.deepEqual(commonRouteIds(s,[1],[3]),[]);s[1].routes.edges[0].goBack=1;assert.deepEqual(commonRouteIds(s,[1],[3]),[117]);});
+test('same boarding and alighting stop is not a bus journey',()=>{assert.equal(directJourneys([route],[1],[1],points[0],points[0],100,100).length,0);});

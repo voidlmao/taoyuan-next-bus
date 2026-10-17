@@ -15,3 +15,9 @@ main{width:100%}.workspace,.stops{width:100%;max-width:100%}
 .route-filters{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 0;min-width:0}
 .route-filters button{flex:1 0 40px;min-height:44px;padding:8px 7px;border:1px solid var(--line);border-radius:10px;background:#f6f7f2;color:var(--green);font-size:13px;font-weight:600}
 .route-filters button[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:white}
+
+.stop{align-items:flex-start}.stop>span:nth-child(2){flex:1}
+.stop-directions{display:block;margin-top:8px;font-size:12px;line-height:1.6;color:#315c48}
+.stop-directions>span{display:block}.stop-directions .direction-more{font-size:10px;color:var(--muted)}
+.selected-directions{font-size:12px;color:#315c48;line-height:1.8;margin-top:10px;overflow-wrap:anywhere}
+.selected-directions>span{display:block}.selected-directions:empty{display:none}

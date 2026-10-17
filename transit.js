@@ -45,3 +45,11 @@ export function matchesRoute(name,filter){
  const n=String(name).replace(/\s/g,'').toUpperCase();
  return filter==='all'||(filter==='favorites'?FAVORITE_ROUTES.includes(n):n===filter);
 }
+
+export function routeDestination(route){return (route.goBack===1?route.destination:route.departure)||'方向未提供';}
+export function stopRouteDescription(routes,filter='all',limit=3){
+ const visible=routes.filter(r=>matchesRoute(r.name,filter));
+ visible.sort((a,b)=>Number(matchesRoute(b.name,'favorites'))-Number(matchesRoute(a.name,'favorites'))||a.name.localeCompare(b.name,'zh-Hant',{numeric:true}));
+ const labels=[...new Set(visible.map(r=>`${r.name} 往 ${routeDestination(r)}`))];
+ return {labels:labels.slice(0,limit),remaining:Math.max(0,labels.length-limit)};
+}
